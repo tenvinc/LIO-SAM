@@ -107,6 +107,8 @@ public:
     float imuGyrNoise;
     float imuAccBiasN;
     float imuGyrBiasN;
+    float imuPriorBiasNoise;
+    std::vector<double> imuInitialBias;
     float imuGravity;
     float imuRPYWeight;
     vector<double> extRotV;
@@ -233,6 +235,18 @@ public:
         get_parameter("imuAccBiasN", imuAccBiasN);
         declare_parameter("imuGyrBiasN", 7e-5);
         get_parameter("imuGyrBiasN", imuGyrBiasN);
+        declare_parameter("imuPriorBiasNoise", 1e-3);
+        get_parameter("imuPriorBiasNoise", imuPriorBiasNoise);
+        std::vector<double> defaultImuInitialBias{0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+        declare_parameter("imuInitialBias", defaultImuInitialBias);
+        get_parameter("imuInitialBias", imuInitialBias);
+        if (imuInitialBias.size() != 6)
+        {
+            RCLCPP_WARN_STREAM(
+                get_logger(),
+                "imuInitialBias must have 6 elements [ax,ay,az,gx,gy,gz]; using zeros.");
+            imuInitialBias = defaultImuInitialBias;
+        }
         declare_parameter("imuGravity", 9.80511);
         get_parameter("imuGravity", imuGravity);
         declare_parameter("imuRPYWeight", 0.01);

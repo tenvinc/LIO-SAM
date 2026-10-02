@@ -192,6 +192,7 @@ public:
     gtsam::noiseModel::Diagonal::shared_ptr priorPoseNoise;
     gtsam::noiseModel::Diagonal::shared_ptr priorVelNoise;
     gtsam::noiseModel::Diagonal::shared_ptr priorBiasNoise;
+    gtsam::imuBias::ConstantBias initialImuBias_;
     gtsam::noiseModel::Diagonal::shared_ptr correctionNoise;
     gtsam::noiseModel::Diagonal::shared_ptr correctionNoise2;
     gtsam::Vector noiseModelBetweenBias;
@@ -256,17 +257,20 @@ public:
         p->accelerometerCovariance  = gtsam::Matrix33::Identity(3,3) * pow(imuAccNoise, 2); // acc white noise in continuous
         p->gyroscopeCovariance      = gtsam::Matrix33::Identity(3,3) * pow(imuGyrNoise, 2); // gyro white noise in continuous
         p->integrationCovariance    = gtsam::Matrix33::Identity(3,3) * pow(1e-4, 2); // error committed in integrating position from velocities
-        gtsam::imuBias::ConstantBias prior_imu_bias((gtsam::Vector(6) << 0, 0, 0, 0, 0, 0).finished());; // assume zero initial bias
+        initialImuBias_ = gtsam::imuBias::ConstantBias(
+            gtsam::Vector6(
+                imuInitialBias[0], imuInitialBias[1], imuInitialBias[2],
+                imuInitialBias[3], imuInitialBias[4], imuInitialBias[5]));
 
         priorPoseNoise  = gtsam::noiseModel::Diagonal::Sigmas((gtsam::Vector(6) << 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2).finished()); // rad,rad,rad,m, m, m
         priorVelNoise   = gtsam::noiseModel::Isotropic::Sigma(3, 1e4); // m/s
-        priorBiasNoise  = gtsam::noiseModel::Isotropic::Sigma(6, 1e-3); // 1e-2 ~ 1e-3 seems to be good
+        priorBiasNoise  = gtsam::noiseModel::Isotropic::Sigma(6, imuPriorBiasNoise);
         correctionNoise = gtsam::noiseModel::Diagonal::Sigmas((gtsam::Vector(6) << 0.05, 0.05, 0.05, 0.1, 0.1, 0.1).finished()); // rad,rad,rad,m, m, m
         correctionNoise2 = gtsam::noiseModel::Diagonal::Sigmas((gtsam::Vector(6) << 1, 1, 1, 1, 1, 1).finished()); // rad,rad,rad,m, m, m
         noiseModelBetweenBias = (gtsam::Vector(6) << imuAccBiasN, imuAccBiasN, imuAccBiasN, imuGyrBiasN, imuGyrBiasN, imuGyrBiasN).finished();
         
-        imuIntegratorImu_ = new gtsam::PreintegratedImuMeasurements(p, prior_imu_bias); // setting up the IMU integration for IMU message thread
-        imuIntegratorOpt_ = new gtsam::PreintegratedImuMeasurements(p, prior_imu_bias); // setting up the IMU integration for optimization        
+        imuIntegratorImu_ = new gtsam::PreintegratedImuMeasurements(p, initialImuBias_);
+        imuIntegratorOpt_ = new gtsam::PreintegratedImuMeasurements(p, initialImuBias_);
     }
 
     void resetOptimization()
@@ -355,7 +359,7 @@ public:
             gtsam::PriorFactor<gtsam::Vector3> priorVel(V(0), prevVel_, priorVelNoise);
             graphFactors.add(priorVel);
             // initial bias
-            prevBias_ = gtsam::imuBias::ConstantBias();
+            prevBias_ = initialImuBias_;
             gtsam::PriorFactor<gtsam::imuBias::ConstantBias> priorBias(B(0), prevBias_, priorBiasNoise);
             graphFactors.add(priorBias);
             // add values
