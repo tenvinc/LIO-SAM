@@ -181,6 +181,8 @@ public:
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subImu;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subOdometry;
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pubImuOdometry;
+    rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr pubAccelBias;
+    rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr pubGyroBias;
 
     rclcpp::CallbackGroup::SharedPtr callbackGroupImu;
     rclcpp::CallbackGroup::SharedPtr callbackGroupOdom;
@@ -247,6 +249,8 @@ public:
             odomOpt);
 
         pubImuOdometry = create_publisher<nav_msgs::msg::Odometry>(odomTopic+"_incremental", qos_imu);
+        pubAccelBias = create_publisher<geometry_msgs::msg::Vector3Stamped>("lio_sam/imu/accel_bias", qos_imu);
+        pubGyroBias = create_publisher<geometry_msgs::msg::Vector3Stamped>("lio_sam/imu/gyro_bias", qos_imu);
 
         std::shared_ptr<gtsam::PreintegrationParams> p = gtsam::PreintegrationParams::MakeSharedU(imuGravity);
         p->accelerometerCovariance  = gtsam::Matrix33::Identity(3,3) * pow(imuAccNoise, 2); // acc white noise in continuous
@@ -284,6 +288,25 @@ public:
         lastImuT_imu = -1;
         doneFirstOpt = false;
         systemInitialized = false;
+    }
+
+    void publishImuBias(const rclcpp::Time& stamp, const gtsam::imuBias::ConstantBias& bias)
+    {
+        geometry_msgs::msg::Vector3Stamped accelBiasMsg;
+        accelBiasMsg.header.stamp = stamp;
+        accelBiasMsg.header.frame_id = "os_imu";
+        accelBiasMsg.vector.x = bias.accelerometer().x();
+        accelBiasMsg.vector.y = bias.accelerometer().y();
+        accelBiasMsg.vector.z = bias.accelerometer().z();
+        pubAccelBias->publish(accelBiasMsg);
+
+        geometry_msgs::msg::Vector3Stamped gyroBiasMsg;
+        gyroBiasMsg.header.stamp = stamp;
+        gyroBiasMsg.header.frame_id = "os_imu";
+        gyroBiasMsg.vector.x = bias.gyroscope().x();
+        gyroBiasMsg.vector.y = bias.gyroscope().y();
+        gyroBiasMsg.vector.z = bias.gyroscope().z();
+        pubGyroBias->publish(gyroBiasMsg);
     }
 
     void odometryHandler(const nav_msgs::msg::Odometry::SharedPtr odomMsg)
@@ -346,6 +369,8 @@ public:
 
             imuIntegratorImu_->resetIntegrationAndSetBias(prevBias_);
             imuIntegratorOpt_->resetIntegrationAndSetBias(prevBias_);
+
+            publishImuBias(odomMsg->header.stamp, prevBias_);
             
             key = 1;
             systemInitialized = true;
@@ -379,6 +404,8 @@ public:
             optimizer.update(graphFactors, graphValues);
             graphFactors.resize(0);
             graphValues.clear();
+
+            publishImuBias(odomMsg->header.stamp, prevBias_);
 
             key = 1;
         }
@@ -439,6 +466,7 @@ public:
             return;
         }
 
+        publishImuBias(odomMsg->header.stamp, prevBias_);
 
         // 2. after optiization, re-propagate imu odometry preintegration
         prevStateOdom = prevState_;
