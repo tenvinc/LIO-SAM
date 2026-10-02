@@ -33,13 +33,14 @@
     lidarMaxRange: 1000.0                        # default: 1000.0, maximum lidar range to be used
 
     # IMU Settings
+    imuType: 0                                   # 0 = 6-axis (no magnetometer), 1 = 9-axis
     imuAccNoise: 3.9939570888238808e-03
     imuGyrNoise: 1.5636343949698187e-03
     imuAccBiasN: 6.4356659353532566e-05
     imuGyrBiasN: 3.5640318696367613e-05
 
     imuGravity: 9.80511
-    imuRPYWeight: 0.01
+    imuRPYWeight: 0.0                             # Set this to be non zero if you are using 9-axis IMU
 
     extrinsicTrans:  [ 0.0,  0.0,  0.0 ]
     extrinsicRot:    [-1.0,  0.0,  0.0,
