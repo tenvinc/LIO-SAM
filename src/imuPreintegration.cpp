@@ -14,7 +14,7 @@
 #include <gtsam/inference/Symbol.h>
 
 #include <gtsam/nonlinear/ISAM2.h>
-#include <gtsam/nonlinear/IncrementalFixedLagSmoother.h>
+#include <gtsam_unstable/nonlinear/IncrementalFixedLagSmoother.h>
 #include <gtsam/navigation/PreintegrationParams.h>
 
 #include <memory>
@@ -253,7 +253,8 @@ public:
         pubAccelBias = create_publisher<geometry_msgs::msg::Vector3Stamped>("lio_sam/imu/accel_bias", qos_imu);
         pubGyroBias = create_publisher<geometry_msgs::msg::Vector3Stamped>("lio_sam/imu/gyro_bias", qos_imu);
 
-        std::shared_ptr<gtsam::PreintegrationParams> p = gtsam::PreintegrationParams::MakeSharedU(imuGravity);
+        boost::shared_ptr<gtsam::PreintegrationParams> p =
+            gtsam::PreintegrationParams::MakeSharedU(imuGravity);
         p->accelerometerCovariance  = gtsam::Matrix33::Identity(3,3) * pow(imuAccNoise, 2); // acc white noise in continuous
         p->gyroscopeCovariance      = gtsam::Matrix33::Identity(3,3) * pow(imuGyrNoise, 2); // gyro white noise in continuous
         p->integrationCovariance    = gtsam::Matrix33::Identity(3,3) * pow(1e-4, 2); // error committed in integrating position from velocities

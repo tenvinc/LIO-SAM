@@ -35,6 +35,7 @@ include_directories(
   ${EIGEN3_INCLUDE_DIR}
   ${PCL_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
+  ${pcl_conversions_INCLUDE_DIRS}
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME} "msg/CloudInfo.msg" "srv/SaveMap.srv" DEPENDENCIES std_msgs sensor_msgs)
@@ -48,7 +49,6 @@ set(common_deps
   ${nav_msgs_TARGETS}
   ${visualization_msgs_TARGETS}
   ${pcl_msgs_TARGETS}
-  pcl_conversions::pcl_conversions
   tf2::tf2
   tf2_ros::tf2_ros
   tf2_eigen::tf2_eigen
