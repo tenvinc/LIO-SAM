@@ -181,8 +181,11 @@ public:
             string saveMapDirectory;
             cout << "****************************************************" << endl;
             cout << "Saving map to pcd files ..." << endl;
-            if(req->destination.empty()) saveMapDirectory = std::getenv("HOME") + savePCDDirectory;
-            else saveMapDirectory = std::getenv("HOME") + req->destination;
+            const string path = req->destination.empty() ? savePCDDirectory : req->destination;
+            if (!path.empty() && path.front() == '/')
+                saveMapDirectory = path;
+            else
+                saveMapDirectory = std::getenv("HOME") + path;
             cout << "Save destination: " << saveMapDirectory << endl;
             // create directory and remove old files;
             int unused = system((std::string("exec rm -r ") + saveMapDirectory).c_str());
